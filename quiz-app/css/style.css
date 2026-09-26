@@ -2,8 +2,10 @@
 *::before,
 *::after {
     box-sizing: border-box;
+}
+
+body {
     margin: 0;
-    padding: 0;
 }
 
 body {
@@ -116,12 +118,10 @@ section h2 {
 
 #results ul {
     list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    padding: 0;
 }
 
-#results article {
+.card {
     background-color: #ffffff;
     padding: 10px;
     border-radius: 8px;
@@ -133,12 +133,12 @@ section h2 {
     flex-wrap: wrap;
 }
 
-#results article h3 {
+.card h3 {
     font-size: 1rem;
     color: #5b21b6;
 }
 
-#results article p {
+.card p {
     font-size: 0.9rem;
     color: #6b7280;
 }
