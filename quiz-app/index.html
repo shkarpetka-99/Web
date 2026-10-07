@@ -5,11 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вікторина</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
-    <!-- Шапка з назвою застосунку -->
     <header>
         <h1>Вікторина</h1>
         <nav>
@@ -19,70 +19,89 @@
     </header>
 
     <main>
-        <!-- Блок поточного питання й варіантів відповіді; -->
+        <!-- Блок поточного питання й варіантів відповіді -->
         <section id="questions">
-            <h2>Питання 1</h2>
-            <p>Це питання 1</p>
-            <ul>
+            <h2 class="huge-question-number">01</h2>
+            <p class="question-text">Це питання 1</p>
+
+            <ul class="answers-list">
                 <li>
-                    <label for="answer-1">
+                    <label class="answer-btn" for="answer-1">
                         <input type="radio" id="answer-1" name="question-1">
-                        <span>Відповідь 1</span>
+                        <span class="answer-text">Відповідь 1</span>
                     </label>
                 </li>
                 <li>
-                    <label for="answer-2">
+                    <label class="answer-btn" for="answer-2">
                         <input type="radio" id="answer-2" name="question-1">
-                        <span>Відповідь 2</span>
+                        <span class="answer-text">Відповідь 2</span>
                     </label>
                 </li>
+                <!-- Демонстрація правильної відповіді з індикатором доступності -->
                 <li>
-                    <label for="answer-3">
-                        <input type="radio" id="answer-3" name="question-1">
-                        <span>Відповідь 3</span>
+                    <label class="answer-btn is-correct" for="answer-3">
+                        <input type="radio" id="answer-3" name="question-1" disabled checked>
+                        <span class="answer-text">Відповідь 3</span>
+                        <span class="a11y-indicator" aria-hidden="true">✓ Правильно</span>
                     </label>
                 </li>
+                <!-- Демонстрація неправильної відповіді з індикатором доступності -->
                 <li>
-                    <label for="answer-3">
-                        <input type="radio" id="answer-3" name="question-1">
-                        <span>Відповідь 4</span>
+                    <label class="answer-btn is-error" for="answer-4">
+                        <input type="radio" id="answer-4" name="question-1" disabled>
+                        <span class="answer-text">Відповідь 4</span>
+                        <span class="a11y-indicator" aria-hidden="true">✗ Помилка</span>
                     </label>
                 </li>
             </ul>
         </section>
 
         <!-- Блок прогресу проходження -->
+        <div class="progress-container">
+            <div class="progress-info">
+                <span class="progress-text">Питання 1 з 5</span>
+                <span class="progress-percent">20%</span>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill" style="width: 20%;"></div>
+            </div>
+        </div>
 
         <!-- Блок результатів спроб -->
         <section id="results">
             <h2>Історія спроб</h2>
-            <ul>
+            <ul class="results-grid">
                 <li>
                     <article class="card">
-                        <h3>Спроба 1</h3>
-                        <p>Дата: 15.09.2026</p>
-                        <p>Результат: 3/5</p>
+                        <div>
+                            <h3>Спроба 1</h3>
+                            <p class="date">Дата: 15.09.2026</p>
+                        </div>
+                        <p class="badge">Результат: 3/5</p>
                     </article>
                 </li>
                 <li>
                     <article class="card">
-                        <h3>Спроба 2</h3>
-                        <p>Дата: 3.10.2026</p>
-                        <p>Результат: 5/5</p>
+                        <div>
+                            <h3>Спроба 2</h3>
+                            <p class="date">Дата: 03.10.2026</p>
+                        </div>
+                        <p class="badge">Результат: 5/5</p>
                     </article>
                 </li>
                 <li>
                     <article class="card">
-                        <h3>Спроба 3</h3>
-                        <p>Дата: 3.10.2026</p>
-                        <p>Результат: 4/5</p>
+                        <div>
+                            <h3>Спроба 3</h3>
+                            <p class="date">Дата: 03.10.2026</p>
+                        </div>
+                        <p class="badge">Результат: 4/5</p>
                     </article>
                 </li>
             </ul>
         </section>
     </main>
 
-    <!-- Підвал -->
     <footer>
         <p>&copy; 2026 Вікторина. Всі права захищені. Авторство: ІП-52 Хитрич Іван</p>
     </footer>
