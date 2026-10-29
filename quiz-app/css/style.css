@@ -179,10 +179,12 @@ section {
 }
 
 .answer-btn input[type="radio"] {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  clip: rect(0, 0, 0, 0);
 }
 
 .answer-btn:hover {
@@ -283,6 +285,23 @@ footer {
 footer p {
     margin: 0;
 }
+
+.answer-btn { position: relative; }
+ 
+.action-btn {
+    margin-top: 1.5rem;
+    padding: 0.9rem 2rem;
+    border: none;
+    border-radius: 999px;
+    background-color: var(--yellow-accent);
+    color: var(--text-dark);
+    font-family: inherit;
+    font-size: 1.1rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+ 
+.action-btn[hidden] { display: none; }
 
 @media (min-width: 600px) {
     .answers-list {

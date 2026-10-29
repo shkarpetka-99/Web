@@ -22,62 +22,27 @@
     <main>
         <!-- Блок поточного питання й варіантів відповіді -->
         <section id="questions">
-            <h2 class="huge-question-number">01</h2>
-            <p class="question-text">Це питання 1</p>
+            <h2 class="huge-question-number" id="question-number">01</h2>
+            <p class="question-text" id="question-text">Питання</p>
 
-            <ul class="answers-list">
-                <li>
-                    <label class="answer-btn" for="answer-1">
-                        <input type="radio" id="answer-1" name="question-1">
-                        <span class="answer-text">Відповідь 1</span>
-                    </label>
-                </li>
-                <li>
-                    <label class="answer-btn" for="answer-2">
-                        <input type="radio" id="answer-2" name="question-1">
-                        <span class="answer-text">Відповідь 2</span>
-                    </label>
-                </li>
-                <!-- Демонстрація правильної відповіді з індикатором доступності -->
-                <li>
-                    <label class="answer-btn is-correct" for="answer-3">
-                        <input type="radio" id="answer-3" name="question-1" disabled checked>
-                        <span class="answer-text">Відповідь 3</span>
-                        <span class="a11y-indicator" aria-hidden="true">✓ Правильно</span>
-                    </label>
-                </li>
-                <!-- Демонстрація неправильної відповіді з індикатором доступності -->
-                <li>
-                    <label class="answer-btn is-error" for="answer-4">
-                        <input type="radio" id="answer-4" name="question-1" disabled>
-                        <span class="answer-text">Відповідь 4</span>
-                        <span class="a11y-indicator" aria-hidden="true">✗ Помилка</span>
-                    </label>
-                </li>
-            </ul>
+            <form id="quiz-form">
+                <ul class="answers-list" id="answers-list"></ul>
+
+                <button type="submit" class="action-btn" id="submit-btn">Відповісти</button>
+                <button type="button" class="action-btn" id="next-btn" hidden>Наступне питання</button>
+            </form>
         </section>
 
         <!-- Блок прогресу проходження -->
         <div class="progress-container">
             <div class="progress-info">
-                <span class="progress-text">Питання 1 з 5</span>
-                <span class="progress-percent">20%</span>
+                <span class="progress-text" id="progress-text">Питання 1 з 3</span>
+                <span class="progress-percent" id="progress-percent">0%</span>
             </div>
             <div class="progress-track">
-                <div class="progress-fill" style="width: 20%;"></div>
+                <div class="progress-fill" id="progress-fill" style="width: 0%;"></div>
             </div>
         </div>
-
-        <section id="all-questions">
-            <h2>Всі питання вікторини</h2>
-            <p id="questions-count">Кількість питань: 0</p>
-
-            <ul id="questions-list" class="results-grid">
-                <li class="static-question card">
-                    Статичне питання (буде видалено)
-                </li>
-            </ul>
-        </section>
 
         <!-- Блок результатів спроб -->
         <section id="results">
