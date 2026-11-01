@@ -303,6 +303,23 @@ footer p {
  
 .action-btn[hidden] { display: none; }
 
+.status {
+    margin: 0 0 1rem;
+    font-weight: 700;
+    color: var(--purple-main);
+}
+
+.status-error {
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    background-color: var(--incorrect-bg);
+    color: #ffffff;
+}
+
+.status[hidden] { display: none; }
+
+.action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
 @media (min-width: 600px) {
     .answers-list {
         display: grid;

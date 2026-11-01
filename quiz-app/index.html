@@ -22,6 +22,10 @@
     <main>
         <!-- Блок поточного питання й варіантів відповіді -->
         <section id="questions">
+            <p id="loading" class="status" hidden>Завантаження питань…</p>
+            <p id="error-message" class="status status-error" role="alert" hidden></p>
+
+
             <h2 class="huge-question-number" id="question-number">01</h2>
             <p class="question-text" id="question-text">Питання</p>
 
@@ -31,6 +35,9 @@
                 <button type="submit" class="action-btn" id="submit-btn">Відповісти</button>
                 <button type="button" class="action-btn" id="next-btn" hidden>Наступне питання</button>
             </form>
+
+            <button type="button" class="action-btn" id="refresh-btn">Оновити</button>
+
         </section>
 
         <!-- Блок прогресу проходження -->
