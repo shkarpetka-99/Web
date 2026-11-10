@@ -1,22 +1,9 @@
-const form = document.querySelector('#quiz-form');
-const answersList = document.querySelector('#answers-list');
-const submitBtn = document.querySelector('#submit-btn');
-const nextBtn = document.querySelector('#next-btn');
-const numberEl = document.querySelector('#question-number');
-const questionTextEl = document.querySelector('#question-text');
-const progressText = document.querySelector('#progress-text');
-const progressPercent = document.querySelector('#progress-percent');
-const progressFill = document.querySelector('#progress-fill');
-const loadingEl = document.querySelector('#loading');
-const errorEl = document.querySelector('#error-message');
-const refreshBtn = document.querySelector('#refresh-btn');
+// Фреймворк: React 18 (через CDN). Обрано, бо рендер списку робиться звичайним
+// map() у JSX, без окремого синтаксису шаблонів, і працює без збірки та Node.js.
 
-// Вмикає/вимикає індикатор завантаження та блокує кнопки.
-function setLoading(isLoading) {
-  loadingEl.hidden = !isLoading;
-  refreshBtn.disabled = isLoading;
-  submitBtn.disabled = isLoading || quizData.length === 0;
-}
+const { useState, useEffect } = React;
+
+const API_URL = 'https://opentdb.com/api.php?amount=10&type=multiple';
 
 // Розкодовує HTML-сутності (&quot;, &#039; тощо) у звичайний текст.
 function decodeHtml(text) {
@@ -33,12 +20,13 @@ function shuffle(array) {
   return result;
 }
 
-// Перетворює results[] з API на формат, який очікує renderQuestion.
+// Перетворює results[] з API на формат { id, question, options, correctIndex }.
 function mapResults(results) {
-  return results.map((item) => {
+  return results.map((item, index) => {
     const correct = decodeHtml(item.correct_answer);
     const options = shuffle([correct, ...item.incorrect_answers.map(decodeHtml)]);
     return {
+      id: index,
       question: decodeHtml(item.question),
       options,
       correctIndex: options.indexOf(correct)
@@ -46,122 +34,161 @@ function mapResults(results) {
   });
 }
 
-let quizData = [];
-const userAnswers = [];
-let currentIndex = 0;
+// Дочірній компонент: дані лише через props.
+function QuizQuestion({ question, options, correctIndex, selectedIndex, onAnswer }) {
+  const answered = selectedIndex !== null;
 
-const API_URL = 'https://opentdb.com/api.php?amount=10&type=multiple';
+  return (
+    <>
+      <p className="question-text">{question}</p>
+      <ul className="answers-list">
+        {options.map((text, i) => {
+          let className = 'answer-btn';
+          if (answered && i === correctIndex) className += ' is-correct';
+          else if (answered && i === selectedIndex) className += ' is-error';
 
-async function loadData() {
-  try {
-    setLoading(true);
-    errorEl.hidden = true;
-
-    const response = await fetch(API_URL);
-    if (!response.ok) {
-      throw new Error(`Помилка HTTP: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log(data);
-    if (data.response_code !== 0) {
-      throw new Error(`API повернув response_code ${data.response_code}`);
-    }
-
-    quizData = mapResults(data.results);
-    currentIndex = 0;
-    userAnswers.length = 0;
-    form.reset();
-    renderQuestion();
-  }
-  catch (error) {
-    console.error('Не вдалося завантажити питання:', error);
-    errorEl.textContent = 'Не вдалося завантажити питання. Перевірте інтернет-з’єднання та спробуйте ще раз.';
-    errorEl.hidden = false;
-  } finally {
-    setLoading(false);
-  }
+          return (
+            <li key={text}>
+              <button
+                type="button"
+                className={className}
+                disabled={answered}
+                onClick={() => onAnswer(i)}
+              >
+                <span className="answer-text">{text}</span>
+                {answered && i === selectedIndex && (
+                  <span className="a11y-indicator">
+                    {i === correctIndex ? '✓ Правильно' : '✗ Помилка'}
+                  </span>
+                )}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
 }
 
-loadData();
+// Батьківський компонент: увесь реактивний стан вікторини.
+function App() {
+  const [quizData, setQuizData] = useState([]);
+  const [userAnswers, setUserAnswers] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [score, setScore] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-refreshBtn.addEventListener('click', loadData);
+  async function loadData() {
+    try {
+      setLoading(true);
+      setError('');
 
-// Малює поточне питання, radio-варіанти та прогрес.
-function renderQuestion() {
-  const q = quizData[currentIndex];
+      const response = await fetch(API_URL);
+      if (!response.ok) {
+        throw new Error(`Помилка HTTP: ${response.status}`);
+      }
 
-  numberEl.textContent = String(currentIndex + 1).padStart(2, '0');
-  questionTextEl.textContent = q.question;
-  answersList.innerHTML = '';
+      const data = await response.json();
+      console.log(data);
+      if (data.response_code !== 0) {
+        throw new Error(`API повернув response_code ${data.response_code}`);
+      }
 
-  q.options.forEach((text, i) => {
-    const li = document.createElement('li');
-    const label = document.createElement('label');
-    label.className = 'answer-btn';
-    label.htmlFor = `answer-${i}`;
+      setQuizData(mapResults(data.results));
+      setCurrentIndex(0);
+      setUserAnswers([]);
+      setScore(0);
+    } catch (err) {
+      console.error('Не вдалося завантажити питання:', err);
+      setError('Не вдалося завантажити питання. Перевірте інтернет-з’єднання та спробуйте ще раз.');
+    } finally {
+      setLoading(false);
+    }
+  }
 
-    const input = document.createElement('input');
-    input.type = 'radio';
-    input.id = `answer-${i}`;
-    input.name = 'answer';
-    input.value = i;
-    input.required = true;
+  useEffect(() => {
+    loadData();
+  }, []);
 
-    const span = document.createElement('span');
-    span.className = 'answer-text';
-    span.textContent = text;
+  const total = quizData.length;
+  const current = quizData[currentIndex];
+  const currentAnswer = userAnswers.find(a => a.questionIndex === currentIndex);
+  const selectedIndex = currentAnswer ? currentAnswer.chosenIndex : null;
+  const answered = currentAnswer !== undefined;
+  const percent = total ? Math.round((userAnswers.length / total) * 100) : 0;
 
-    label.append(input, span);
-    li.append(label);
-    answersList.append(li);
-  });
+  // Подія з дочірнього компонента: перевіряє відповідь і оновлює бали.
+  function handleAnswer(chosenIndex) {
+    if (answered) return;
+    const isCorrect = chosenIndex === current.correctIndex;
+    setUserAnswers(prev => [...prev, { questionIndex: currentIndex, chosenIndex, isCorrect }]);
+    if (isCorrect) setScore(prev => prev + 1);
+  }
 
-  const percent = Math.round((currentIndex / quizData.length) * 100);
-  progressText.textContent = `Питання ${currentIndex + 1} з ${quizData.length}`;
-  progressPercent.textContent = `${percent}%`;
-  progressFill.style.width = `${percent}%`;
+  function handleNext() {
+    if (currentIndex < total - 1) {
+      setCurrentIndex(prev => prev + 1);
+    } else {
+      setCurrentIndex(0);
+      setUserAnswers([]);
+      setScore(0);
+    }
+  }
 
-  submitBtn.hidden = false;
-  nextBtn.hidden = true;
+  return (
+    <>
+      <section id="questions">
+        {loading && <p className="status">Завантаження питань…</p>}
+        {error && <p className="status status-error" role="alert">{error}</p>}
+
+        {current && (
+          <>
+            <h2 className="huge-question-number">
+              {String(currentIndex + 1).padStart(2, '0')}
+            </h2>
+            <QuizQuestion
+              key={current.id}
+              question={current.question}
+              options={current.options}
+              correctIndex={current.correctIndex}
+              selectedIndex={selectedIndex}
+              onAnswer={handleAnswer}
+            />
+            {answered && (
+              <button type="button" className="action-btn" onClick={handleNext}>
+                {currentIndex < total - 1 ? 'Наступне питання' : 'Почати спочатку'}
+              </button>
+            )}
+          </>
+        )}
+
+        <button type="button" className="action-btn" onClick={loadData} disabled={loading}>
+          Оновити
+        </button>
+      </section>
+
+      <div className="progress-container">
+        <div className="progress-info">
+          <span className="progress-text">
+            Питання {total ? currentIndex + 1 : 0} з {total}
+          </span>
+          <span className="progress-text">Бали: {score}</span>
+          <span className="progress-percent">{percent}%</span>
+        </div>
+        <div className="progress-track">
+          <div className="progress-fill" style={{ width: `${percent}%` }}></div>
+        </div>
+      </div>
+    </>
+  );
 }
 
-// Обробка відправки форми.
-form.addEventListener('submit', (event) => {
-  event.preventDefault();
+ReactDOM.createRoot(document.getElementById('quiz-root')).render(<App />);
 
-  const checked = form.querySelector('input[name="answer"]:checked');
-  const chosenIndex = Number(checked.value);
-  const correctIndex = quizData[currentIndex].correctIndex;
-  const isCorrect = chosenIndex === correctIndex;
-
-  userAnswers.push({ questionIndex: currentIndex, chosenIndex, isCorrect });
-
-  const labels = answersList.querySelectorAll('.answer-btn');
-  labels.forEach((label) => {
-    label.querySelector('input').disabled = true;
-  });
-
-  labels[chosenIndex].classList.add(isCorrect ? 'is-correct' : 'is-error');
-  labels[chosenIndex].insertAdjacentHTML('beforeend',
-    `<span class="a11y-indicator">${isCorrect ? '✓ Правильно' : '✗ Помилка'}</span>`);
-  if (!isCorrect) {
-    labels[correctIndex].classList.add('is-correct');
-  }
-
-  submitBtn.hidden = true;
-  nextBtn.hidden = false;
-});
-
-// Клік по «Наступне питання»: скидає форму й перемикає питання.
-nextBtn.addEventListener('click', () => {
-  form.reset();
-
-  if (currentIndex < quizData.length - 1) {
-    currentIndex++;
-  } else {
-    currentIndex = 0;
-    userAnswers.length = 0;
-  }
-  renderQuestion();
-});
+/*
+Практикум 7 (ручний рендер) замінено компонентами:
+функції renderQuestion() і setLoading(), обробники submit/click та всі
+querySelector/innerHTML для ділянки питань видалено. Їхню роботу тепер виконують
+компонент QuizQuestion (рендер варіантів через map) і стан useState в App.
+*/

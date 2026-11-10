@@ -176,29 +176,20 @@ section {
     font-weight: 700;
     transition: all 0.2s ease;
     width: 100%;
+    font-family: inherit;
+    text-align: left;
+    position: relative; 
 }
 
-.answer-btn input[type="radio"] {
-  position: absolute;
-  opacity: 0;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  clip: rect(0, 0, 0, 0);
+.answer-btn:disabled {
+    cursor: default;
 }
 
-.answer-btn:hover {
+.answer-btn:not(:disabled):hover {
     background-color: var(--yellow-accent);
     border-color: var(--yellow-hover);
     color: var(--text-dark);
     transform: translateY(-2px);
-}
-
-.answer-btn:has(input[type="radio"]:checked) {
-    background-color: var(--purple-main);
-    border-color: var(--purple-dark);
-    color: var(--yellow-accent);
-    box-shadow: 0 4px 12px rgba(91, 33, 182, 0.25);
 }
 
 .answer-btn.is-correct {
@@ -285,8 +276,6 @@ footer {
 footer p {
     margin: 0;
 }
-
-.answer-btn { position: relative; }
  
 .action-btn {
     margin-top: 1.5rem;
