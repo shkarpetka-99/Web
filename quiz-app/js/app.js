@@ -34,7 +34,7 @@ function mapResults(results) {
   });
 }
 
-// Дочірній компонент: дані лише через props.
+// Дочірній компонент: дані лише через props, без глобальних змінних.
 function QuizQuestion({ question, options, correctIndex, selectedIndex, onAnswer }) {
   const answered = selectedIndex !== null;
 
@@ -70,6 +70,36 @@ function QuizQuestion({ question, options, correctIndex, selectedIndex, onAnswer
   );
 }
 
+// Список найкращих результатів: сортування масиву з getAllItems на клієнті.
+function ResultsList({ results, error }) {
+  const best = [...results]
+    .sort((a, b) => b.score / b.total - a.score / a.total || new Date(b.date) - new Date(a.date))
+    .slice(0, 5);
+
+  return (
+    <section id="results">
+      <h2>Найкращі результати</h2>
+      {error && <p className="status status-error" role="alert">{error}</p>}
+      {!error && best.length === 0 && (
+        <p className="status">Поки що немає збережених результатів.</p>
+      )}
+      <ul className="results-grid">
+        {best.map((r, i) => (
+          <li key={r.id}>
+            <article className="card">
+              <div>
+                <h3>№{i + 1}</h3>
+                <p className="date">Дата: {new Date(r.date).toLocaleDateString('uk-UA')}</p>
+              </div>
+              <p className="badge">Результат: {r.score}/{r.total}</p>
+            </article>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 // Батьківський компонент: увесь реактивний стан вікторини.
 function App() {
   const [quizData, setQuizData] = useState([]);
@@ -78,6 +108,8 @@ function App() {
   const [score, setScore] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [results, setResults] = useState([]);
+  const [dbError, setDbError] = useState('');
 
   async function loadData() {
     try {
@@ -107,8 +139,38 @@ function App() {
     }
   }
 
+  // Читає всі результати з IndexedDB і кладе їх у стан (інтерфейс оновиться сам).
+  async function refreshResults() {
+    try {
+      setResults(await getAllItems());
+      setDbError('');
+    } catch (err) {
+      console.error('IndexedDB недоступна:', err);
+      setDbError('Не вдалося працювати зі сховищем результатів. Можливо, IndexedDB недоступна.');
+    }
+  }
+
+  // Зберігає результат завершеного квізу й оновлює список.
+  async function saveResult(finalScore) {
+    try {
+      await addItem({ date: new Date().toISOString(), score: finalScore, total: quizData.length });
+      await refreshResults();
+    } catch (err) {
+      console.error('Не вдалося зберегти результат:', err);
+      setDbError('Не вдалося зберегти результат у сховищі.');
+    }
+  }
+
   useEffect(() => {
     loadData();
+    (async () => {
+      try {
+        await migrateFromLocalStorage();
+      } catch (err) {
+        console.error('Міграція з localStorage не вдалася:', err);
+      }
+      await refreshResults();
+    })();
   }, []);
 
   const total = quizData.length;
@@ -116,6 +178,7 @@ function App() {
   const currentAnswer = userAnswers.find(a => a.questionIndex === currentIndex);
   const selectedIndex = currentAnswer ? currentAnswer.chosenIndex : null;
   const answered = currentAnswer !== undefined;
+  const finished = total > 0 && userAnswers.length === total;
   const percent = total ? Math.round((userAnswers.length / total) * 100) : 0;
 
   // Подія з дочірнього компонента: перевіряє відповідь і оновлює бали.
@@ -124,6 +187,11 @@ function App() {
     const isCorrect = chosenIndex === current.correctIndex;
     setUserAnswers(prev => [...prev, { questionIndex: currentIndex, chosenIndex, isCorrect }]);
     if (isCorrect) setScore(prev => prev + 1);
+
+    // Остання відповідь: квіз завершено, зберігаємо результат.
+    if (userAnswers.length + 1 === total) {
+      saveResult(isCorrect ? score + 1 : score);
+    }
   }
 
   function handleNext() {
@@ -155,6 +223,9 @@ function App() {
               selectedIndex={selectedIndex}
               onAnswer={handleAnswer}
             />
+            {finished && (
+              <p className="status">Квіз завершено: {score} з {total}</p>
+            )}
             {answered && (
               <button type="button" className="action-btn" onClick={handleNext}>
                 {currentIndex < total - 1 ? 'Наступне питання' : 'Почати спочатку'}
@@ -180,15 +251,10 @@ function App() {
           <div className="progress-fill" style={{ width: `${percent}%` }}></div>
         </div>
       </div>
+
+      <ResultsList results={results} error={dbError} />
     </>
   );
 }
 
 ReactDOM.createRoot(document.getElementById('quiz-root')).render(<App />);
-
-/*
-Практикум 7 (ручний рендер) замінено компонентами:
-функції renderQuestion() і setLoading(), обробники submit/click та всі
-querySelector/innerHTML для ділянки питань видалено. Їхню роботу тепер виконують
-компонент QuizQuestion (рендер варіантів через map) і стан useState в App.
-*/
