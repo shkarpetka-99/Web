@@ -1,9 +1,13 @@
 // Фреймворк: React 18 (через CDN). Обрано, бо рендер списку робиться звичайним
 // map() у JSX, без окремого синтаксису шаблонів, і працює без збірки та Node.js.
 
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 const API_URL = 'https://opentdb.com/api.php?amount=10&type=multiple';
+
+// Час на відповідь (секунди) залежно від складності питання з API.
+const TIME_BY_DIFFICULTY = { easy: 15, medium: 20, hard: 25 };
+const TIMER_SIZE = 120;
 
 // Розкодовує HTML-сутності (&quot;, &#039; тощо) у звичайний текст.
 function decodeHtml(text) {
@@ -20,7 +24,7 @@ function shuffle(array) {
   return result;
 }
 
-// Перетворює results[] з API на формат { id, question, options, correctIndex }.
+// Перетворює results[] з API на формат { id, question, options, correctIndex, timeLimit }.
 function mapResults(results) {
   return results.map((item, index) => {
     const correct = decodeHtml(item.correct_answer);
@@ -29,9 +33,91 @@ function mapResults(results) {
       id: index,
       question: decodeHtml(item.question),
       options,
-      correctIndex: options.indexOf(correct)
+      correctIndex: options.indexOf(correct),
+      difficulty: item.difficulty,
+      timeLimit: TIME_BY_DIFFICULTY[item.difficulty] || 20
     };
   });
+}
+
+// Малює один кадр таймера: трек, дуга, що зменшується, і число секунд.
+function drawTimer(ctx, remaining, duration) {
+  const center = TIMER_SIZE / 2;
+  const radius = 48;
+  const fraction = remaining / duration;
+  const start = -Math.PI / 2;
+
+  ctx.clearRect(0, 0, TIMER_SIZE, TIMER_SIZE);
+  ctx.lineWidth = 10;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#f3e8ff';
+  ctx.beginPath();
+  ctx.arc(center, center, radius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  if (fraction > 0) {
+    ctx.strokeStyle = remaining <= 5 ? '#b91c1c' : '#5b21b6';
+    ctx.beginPath();
+    ctx.arc(center, center, radius, start, start + fraction * Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Число секунд у центрі
+  ctx.fillStyle = '#1e1b4b';
+  ctx.font = '800 28px Nunito, system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(Math.ceil(remaining)), center, center);
+}
+
+// Canvas-таймер: цикл requestAnimationFrame працює, поки running === true.
+function TimerCanvas({ duration, running, onTimeout }) {
+  const canvasRef = useRef(null);
+  const remainingRef = useRef(duration);
+  const onTimeoutRef = useRef(onTimeout);
+  onTimeoutRef.current = onTimeout;
+  const dpr = window.devicePixelRatio || 1;
+
+  useEffect(() => {
+    const ctx = canvasRef.current.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    let rafId = null;
+    let last = null;
+
+    function frame(now) {
+      if (last === null) last = now;
+      const dt = Math.min(now - last, 100) / 1000;
+      last = now;
+
+      remainingRef.current = Math.max(0, remainingRef.current - dt);
+      drawTimer(ctx, remainingRef.current, duration);
+
+      if (remainingRef.current === 0) {
+        onTimeoutRef.current();
+        return;
+      }
+      rafId = requestAnimationFrame(frame);
+    }
+
+    drawTimer(ctx, remainingRef.current, duration);
+    if (running) rafId = requestAnimationFrame(frame);
+
+    // Зупинка циклу: відповідь, перехід до наступного питання, вихід з екрана
+    return () => cancelAnimationFrame(rafId);
+  }, [running, duration]);
+
+  return (
+    <div className="timer-wrap">
+      <canvas
+        ref={canvasRef}
+        width={TIMER_SIZE * dpr}
+        height={TIMER_SIZE * dpr}
+        style={{ width: TIMER_SIZE, height: TIMER_SIZE }}
+        role="img"
+        aria-label="Таймер відповіді"
+      />
+    </div>
+  );
 }
 
 // Дочірній компонент: дані лише через props, без глобальних змінних.
@@ -139,14 +225,14 @@ function App() {
     }
   }
 
-  // Читає всі результати з IndexedDB і кладе їх у стан (інтерфейс оновиться сам).
+  // Читає всі результати з IndexedDB і кладе їх у стан.
   async function refreshResults() {
     try {
       setResults(await getAllItems());
       setDbError('');
     } catch (err) {
       console.error('IndexedDB недоступна:', err);
-      setDbError('Не вдалося працювати зі сховищем результатів. Можливо, IndexedDB недоступна.');
+      setDbError('Не вдалося працювати зі сховищем результатів. Можливо, IndexedDB недоступна (наприклад, у приватному режимі).');
     }
   }
 
@@ -182,6 +268,7 @@ function App() {
   const percent = total ? Math.round((userAnswers.length / total) * 100) : 0;
 
   // Подія з дочірнього компонента: перевіряє відповідь і оновлює бали.
+  // chosenIndex === -1 означає, що час на відповідь вичерпано.
   function handleAnswer(chosenIndex) {
     if (answered) return;
     const isCorrect = chosenIndex === current.correctIndex;
@@ -215,6 +302,12 @@ function App() {
             <h2 className="huge-question-number">
               {String(currentIndex + 1).padStart(2, '0')}
             </h2>
+            <TimerCanvas
+              key={`${current.id}-${current.question}`}
+              duration={current.timeLimit}
+              running={!answered && !loading}
+              onTimeout={() => handleAnswer(-1)}
+            />
             <QuizQuestion
               key={current.id}
               question={current.question}
@@ -223,6 +316,9 @@ function App() {
               selectedIndex={selectedIndex}
               onAnswer={handleAnswer}
             />
+            {answered && selectedIndex === -1 && (
+              <p className="status status-error">Час вийшов!</p>
+            )}
             {finished && (
               <p className="status">Квіз завершено: {score} з {total}</p>
             )}

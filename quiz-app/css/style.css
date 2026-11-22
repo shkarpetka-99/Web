@@ -309,6 +309,16 @@ footer p {
 
 .action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
+.timer-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.timer-wrap canvas {
+    display: block;
+}
+
 @media (min-width: 600px) {
     .answers-list {
         display: grid;
